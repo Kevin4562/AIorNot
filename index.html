@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI or Not? Guessing Game</title>
+
+  <!-- ============== STYLES ============== -->
+  <style>
+    /* Global Reset & Body Styling */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html, body {
+      height: 100%;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to right, #2c3e50, #4ca1af);
+      color: #fff;
+      overflow-x: hidden;
+    }
+
+    /* Page Wrapper */
+    .wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      position: relative;
+      padding: 20px;
+      text-align: center;
+    }
+
+    /* Title & Description */
+    .game-title {
+      margin-bottom: 20px;
+    }
+    .game-title h1 {
+      font-size: 2.2rem;
+      margin-bottom: 10px;
+      color: #ffffff;
+      border-bottom: 2px solid #fff;
+      display: inline-block;
+      padding-bottom: 8px;
+    }
+    .game-title p {
+      font-size: 1rem;
+      color: #f0f0f0;
+      max-width: 600px;
+      margin: 0 auto;
+      line-height: 1.5;
+    }
+
+    /* Main Game Area */
+    .game-area {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .media-info-container {
+      display: flex;
+      align-items: flex-start;
+      position: relative;
+    }
+
+    /* Media Container */
+    .media-container {
+      width: 800px;
+      max-width: 70vw;
+      margin: 0 10px 20px 0;
+      position: relative;
+      transition: transform 0.8s ease;
+    }
+    .media-container img,
+    .media-container video {
+      width: 100%;
+      height: auto;
+      border-radius: 10px;
+      display: block;
+      object-fit: cover;
+      border: 2px solid #fff;  
+	  max-height: 1000px;
+    }
+
+    /* Longer, more dramatic animations for correct/incorrect feedback */
+    @keyframes correctFlash {
+      0%   { box-shadow: 0 0 0 5px rgba(0,255,0,0.4); background-color: rgba(0,255,0,0.1); }
+      25%  { box-shadow: 0 0 0 15px rgba(0,255,0,0.3); background-color: rgba(0,255,0,0.2); }
+      50%  { box-shadow: 0 0 0 25px rgba(0,255,0,0.1); background-color: rgba(0,255,0,0.15); }
+      75%  { box-shadow: 0 0 0 35px rgba(0,255,0,0.05); background-color: rgba(0,255,0,0.1); }
+      100% { box-shadow: none; background-color: transparent; }
+    }
+    @keyframes incorrectFlash {
+      0%   { box-shadow: 0 0 0 5px rgba(255,0,0,0.5); background-color: rgba(255,0,0,0.1); }
+      25%  { box-shadow: 0 0 0 15px rgba(255,0,0,0.3); background-color: rgba(255,0,0,0.2); }
+      50%  { box-shadow: 0 0 0 25px rgba(255,0,0,0.1); background-color: rgba(255,0,0,0.15); }
+      75%  { box-shadow: 0 0 0 35px rgba(255,0,0,0.05); background-color: rgba(255,0,0,0.1); }
+      100% { box-shadow: none; background-color: transparent; }
+    }
+
+    .media-container.correct-guess {
+      animation: correctFlash 0.5s ease;
+    }
+    .media-container.incorrect-guess {
+      animation: incorrectFlash 0.5s ease;
+    }
+
+    /* Feedback Message in the center with a bold background */
+    .feedback-message {
+      position: absolute; 
+      top: 50%; 
+      left: 50%; 
+      transform: translate(-50%, -50%);
+      min-width: 180px;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 1.6rem;
+      text-align: center;
+      color: #fff;
+      opacity: 0;
+      transition: opacity 0.8s ease;
+    }
+    .feedback-message.visible {
+      opacity: 1;
+    }
+    /* Different backgrounds for correct vs incorrect */
+    .feedback-message.correct-bg {
+      background-color: rgba(0, 180, 0, 0.9);
+    }
+    .feedback-message.incorrect-bg {
+      background-color: rgba(200, 0, 0, 0.9);
+    }
+
+    /* Info Panel */
+    .info-panel {
+      width: 0;
+      overflow: hidden;
+      background-color: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(6px);
+      border-radius: 8px;
+      padding: 0;
+      opacity: 0;
+      transition: width 0.8s ease, opacity 0.8s ease, padding 0.8s ease;
+      margin-left: 0;
+    }
+    .info-panel.visible {
+      width: 220px;
+      margin-left: 10px;
+      opacity: 1;
+      padding: 20px;
+    }
+    .panel-content {
+      visibility: hidden;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+    .info-panel.show-content .panel-content {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    .info-details {
+      margin-bottom: 15px;
+    }
+    .info-details span {
+      font-weight: bold;
+    }
+    .source-link {
+      color: #4ca1af;
+      text-decoration: underline;
+    }
+    .source-link:hover {
+      color: #fff;
+    }
+
+    /* Score Display */
+    .score {
+      font-size: 1.2rem;
+      margin-bottom: 20px;
+    }
+
+    /* Buttons */
+    .button-group {
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+    }
+    .guess-btn {
+      background-color: #4ca1af;
+      color: #fff;
+      border: 2px solid #fff;
+      padding: 15px 20px;
+      cursor: pointer;
+      font-size: 1.1rem;
+      border-radius: 30px;
+      transition: background-color 0.4s ease, transform 0.2s ease, border-color 0.4s ease;
+      width: 160px;
+      text-align: center;
+    }
+    .guess-btn:hover {
+      background-color: #2c3e50;
+      border-color: #ccc;
+      transform: scale(1.03);
+    }
+    .guess-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    /* Responsive Layout Tweaks */
+    @media (max-width: 768px) {
+      .media-container {
+        width: 80vw;
+        margin-right: 0;
+      }
+      .info-panel.visible {
+        width: 180px;
+        padding: 15px;
+      }
+      .game-title h1 {
+        font-size: 1.8rem;
+      }
+      .guess-btn {
+        width: 140px;
+      }
+      .feedback-message {
+        font-size: 1.3rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ============== PAGE WRAPPER ============== -->
+  <div class="wrapper">
+
+    <!-- ============== GAME TITLE & DESCRIPTION ============== -->
+    <div class="game-title">
+      <h1>AI or Not?</h1>
+      <p>Guess whether this media is AI-generated or real</p>
+    </div>
+
+    <!-- ============== MAIN GAME AREA ============== -->
+    <div class="game-area">
+      <!-- A container for the media and the info panel -->
+      <div class="media-info-container" id="mediaInfoContainer">
+        
+        <!-- Media Container -->
+        <div class="media-container" id="mediaContainer">
+          <!-- Dynamically injected image/video -->
+          <div class="feedback-message" id="feedbackMessage"></div>
+        </div>
+
+        <!-- Info Panel (hidden by default) -->
+        <div class="info-panel" id="infoPanel">
+          <!-- We wrap all text in a 'panel-content' div -->
+          <div class="panel-content">
+            <div class="info-details">
+              <span>Model:</span> <span id="modelName"></span>
+            </div>
+            <div class="info-details">
+              <span>Date:</span> <span id="creationDate"></span>
+            </div>
+            <div class="info-details">
+              <span>Source:</span>
+              <a href="#" target="_blank" class="source-link" id="sourceLink">Source</a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    
+    <!-- Score Display (with accuracy) -->
+    <div class="score" id="scoreDisplay">Score: 0 (Accuracy: 0%)</div>
+
+    <!-- Buttons -->
+    <div class="button-group">
+      <button class="guess-btn" id="aiBtn">AI</button>
+      <button class="guess-btn" id="notAiBtn">Not AI</button>
+    </div>
+
+  </div>
+
+  <!-- ============== SCRIPTS ============== -->
+  <script>
+    // Sample dataset
+    const mediaItems = [
+      {
+        "src": "https://i.ibb.co/NNJbBGs/Gf-OHWMfas-AMLKKV.jpg",
+        "isAI": true,
+        "app": "Imagen3",
+        "date": "Dec 20, 2024",
+        "link": "https://x.com/tsyn18/status/1869987226366730455/photo/2"
+      },
+      {
+        "src": "https://i.ibb.co/4MsX1Rb/Ggiok-Mz-WAAAd-YUx.jpg",
+        "isAI": true,
+        "app": "Flux.2",
+        "date": "Jan 5, 2025",
+        "link": "https://x.com/alxfazio/status/1875934590755553373"
+      },
+	  {
+        "src": "https://i.ibb.co/J3BSdpC/Ggiok-M0-Xk-AA-7-Me.jpg",
+        "isAI": true,
+        "app": "Flux.2",
+        "date": "Jan 5, 2025",
+        "link": "https://x.com/alxfazio/status/1875934590755553373"
+      },
+	  {
+        "src": "https://i.ibb.co/4KVVh9M/Ggiok-M3-X0-AAwv-Eb.jpg",
+        "isAI": true,
+        "app": "Flux.2",
+        "date": "Jan 5, 2025",
+        "link": "https://x.com/alxfazio/status/1875934590755553373"
+      },
+	  {
+        "src": "https://i.ibb.co/vJnhfW8/Ggiok-M0-X0-AEch4y.jpg",
+        "isAI": true,
+        "app": "Flux.2",
+        "date": "Jan 5, 2025",
+        "link": "https://x.com/alxfazio/status/1875934590755553373"
+      },
+	  {
+        "src": "https://i.ibb.co/k6Hyw8Y/Gg-mcp6-W4-AAdrk-M.jpg",
+        "isAI": true,
+        "app": "Mystic 2.5",
+        "date": "Jan 10, 2025",
+        "link": "https://x.com/toolstelegraph/status/1877904645827268637"
+      },
+	  {
+        "src": "https://i.ibb.co/mB8dr99/Gg-o-EYd-Wc-AAQht8.jpg",
+        "isAI": true,
+        "app": "Mystic 2.5",
+        "date": "Jan 10, 2025",
+        "link": "https://x.com/toolstelegraph/status/1877904645827268637"
+      },
+	  {
+        "src": "https://i.ibb.co/HxVMdnm/Gg-o-FVz-Wo-AA24x1.jpg",
+        "isAI": true,
+        "app": "Mystic 2.5",
+        "date": "Jan 10, 2025",
+        "link": "https://x.com/toolstelegraph/status/1877904645827268637"
+      },
+	  {
+        "src": "https://i.ibb.co/kcWs171/Gg-o-Iea-XAAAS39h.jpg",
+        "isAI": true,
+        "app": "Mystic 2.5",
+        "date": "Jan 10, 2025",
+        "link": "https://x.com/toolstelegraph/status/1877904645827268637"
+      },
+	  {
+        "src": "https://i.ibb.co/p2ytQ8X/Gg-8-Pheb-MAAOPc-M.jpg",
+        "isAI": true,
+        "app": "Imagen3",
+        "date": "Jan 5, 2025",
+        "link": "https://x.com/alxfazio/status/1875934590755553373"
+      },
+	  {
+        "src": "https://i.imgur.com/r0lEw3y.mp4",
+        "isAI": true,
+        "app": "Veo2",
+        "date": "",
+        "link": "https://x.com/davipar/status/1874040694530334778"
+      },
+	  {
+        "src": "https://i.imgur.com/TQUBmpy.mp4",
+        "isAI": true,
+        "app": "Veo2",
+        "date": "",
+        "link": "https://x.com/davipar/status/1874040694530334778"
+      },
+	  {
+        "src": "https://i.imgur.com/JDA1ICR.mp4",
+        "isAI": true,
+        "app": "Veo2",
+        "date": "",
+        "link": "https://x.com/davipar/status/1874040694530334778"
+      },
+	  {
+        "src": "https://i.imgur.com/tVDapjx.mp4",
+        "isAI": true,
+        "app": "Veo2",
+        "date": "",
+        "link": "https://x.com/davipar/status/1874040694530334778"
+      },
+	  {
+        "src": "https://i.imgur.com/ZDxdfe6.jpeg",
+        "isAI": true,
+        "app": "",
+        "date": "",
+        "link": ""
+      },
+	  {
+        "src": "https://i.imgur.com/7q8tHoh.jpeg",
+        "isAI": true,
+        "app": "",
+        "date": "",
+        "link": ""
+      },
+	  {
+        "src": "https://i.imgur.com/X5VbacK.jpeg",
+        "isAI": true,
+        "app": "",
+        "date": "",
+        "link": ""
+      },
+	  {
+        "src": "https://i.imgur.com/d979CmG.jpeg",
+        "isAI": false,
+        "app": "",
+        "date": "",
+        "link": ""
+      },
+	  {
+        "src": "https://i.imgur.com/mJnStO2.jpeg",
+        "isAI": false,
+        "app": "",
+        "date": "",
+        "link": ""
+      },
+	  {
+        "src": "https://i.imgur.com/tb3k4Zs.jpeg",
+        "isAI": false,
+        "app": "",
+        "date": "",
+        "link": ""
+      },
+	  {
+        "src": "https://i.imgur.com/IHyEGxI.png",
+        "isAI": false,
+        "app": "",
+        "date": "",
+        "link": "https://www.instagram.com/rico.reinhold/"
+      },
+	  {
+        "src": "https://i.imgur.com/ue6k1kC.png",
+        "isAI": false,
+        "app": "",
+        "date": "",
+        "link": "https://www.instagram.com/rico.reinhold/"
+      },
+	  {
+        "src": "https://i.imgur.com/ByMq1nQ.png",
+        "isAI": false,
+        "app": "",
+        "date": "",
+        "link": ""
+      },
+	  {
+        "src": "https://i.imgur.com/faR30B4.jpeg",
+        "isAI": false,
+        "app": "",
+        "date": "",
+        "link": ""
+      },
+	  {
+        "src": "https://i.imgur.com/9dTphVr.jpeg",
+        "isAI": false,
+        "app": "",
+        "date": "",
+        "link": ""
+      },
+	  {
+        "src": "https://i.imgur.com/fUadJNd.jpeg",
+        "isAI": false,
+        "app": "",
+        "date": "",
+        "link": ""
+      },
+	  {
+        "src": "https://i.imgur.com/PuTwNGk.png",
+        "isAI": false,
+        "app": "",
+        "date": "",
+        "link": "https://www.instagram.com/p/DEBzgxRxtpV/"
+      },
+	  {
+        "src": "https://i.imgur.com/yd2dWsB.png",
+        "isAI": false,
+        "app": "",
+        "date": "",
+        "link": "https://www.instagram.com/p/CHjQ2VhhUuW/"
+      },
+	  {
+        "src": "https://i.imgur.com/GXZTOKO.png",
+        "isAI": false,
+        "app": "",
+        "date": "",
+        "link": ""
+      },
+      // Add more items (including videos) for a richer experience
+    ];
+
+    // DOM Elements
+    const mediaContainer = document.getElementById('mediaContainer');
+    const feedbackMessage = document.getElementById('feedbackMessage');
+    const scoreDisplay = document.getElementById('scoreDisplay');
+    const aiBtn = document.getElementById('aiBtn');
+    const notAiBtn = document.getElementById('notAiBtn');
+    const infoPanel = document.getElementById('infoPanel');
+    const modelName = document.getElementById('modelName');
+    const creationDate = document.getElementById('creationDate');
+    const sourceLink = document.getElementById('sourceLink');
+
+    // Game State
+    let currentIndex = 0;
+    let score = 0;
+    let totalGuesses = 0;  // for accuracy
+    let allowGuess = true;
+    let hidePanelTimeout;
+
+    // Shuffle array (Fisher-Yates)
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    // Initialize the game
+    function initGame() {
+      shuffle(mediaItems);
+      currentIndex = 0;
+      score = 0;
+      totalGuesses = 0;
+      updateScore();
+      displayMedia();
+    }
+
+    // Display media (image or video)
+    function displayMedia() {
+      // Clear previous content, classes, timeouts
+      mediaContainer.innerHTML = '';
+      mediaContainer.appendChild(feedbackMessage); // Reattach the feedback div
+      feedbackMessage.textContent = '';
+      feedbackMessage.className = 'feedback-message'; // Reset classes
+      mediaContainer.classList.remove('correct-guess', 'incorrect-guess');
+
+      // Reset the panel
+      infoPanel.classList.remove('visible', 'show-content');
+      if (hidePanelTimeout) clearTimeout(hidePanelTimeout);
+
+      // Check if we've run out of items
+      if (currentIndex >= mediaItems.length) {
+        currentIndex = 0; // or end the game, etc.
+      }
+
+      const item = mediaItems[currentIndex];
+      let mediaElement;
+
+      // Check if it's a video
+      if (isVideo(item.src)) {
+        mediaElement = document.createElement('video');
+        mediaElement.src = item.src;
+        mediaElement.controls = true;
+      } else {
+        mediaElement = document.createElement('img');
+        mediaElement.src = item.src;
+        mediaElement.alt = "Media Content";
+      }
+
+      mediaContainer.insertBefore(mediaElement, feedbackMessage);
+      enableButtons(true);
+      allowGuess = true;
+    }
+
+    function isVideo(url) {
+      return url.endsWith('.mp4') || url.endsWith('.webm') || url.endsWith('.ogg');
+    }
+
+    // Handle user guess
+    function handleGuess(userGuess) {
+      if (!allowGuess) return;
+      allowGuess = false;
+      enableButtons(false);
+
+      const currentItem = mediaItems[currentIndex];
+      const correctAnswer = currentItem.isAI ? 'AI' : 'Not AI';
+      const isCorrect = (userGuess === correctAnswer);
+
+      // Animate / show feedback
+      feedbackMessage.textContent = isCorrect ? 'Correct!' : 'Incorrect!';
+      feedbackMessage.classList.add('visible', isCorrect ? 'correct-bg' : 'incorrect-bg');
+      mediaContainer.classList.add(isCorrect ? 'correct-guess' : 'incorrect-guess');
+
+      // Update score & guesses
+      totalGuesses++;
+      if (isCorrect) score++;
+      updateScore();
+
+      // Show info panel with details
+      showInfoPanel(currentItem);
+
+      // Hide panel & load next media after delay
+      hidePanelTimeout = setTimeout(() => {
+        hideInfoPanel();
+        setTimeout(() => {
+          currentIndex++;
+          displayMedia();
+        }, 800);
+      }, 3000); // 3 seconds
+    }
+
+    // Show info panel
+    function showInfoPanel(item) {
+      modelName.textContent = item.app;
+      creationDate.textContent = item.date;
+      sourceLink.href = item.link;
+
+      // Wait for width transition before showing text
+      const handleTransitionEnd = (e) => {
+        if (e.propertyName === 'width') {
+          infoPanel.classList.add('show-content');
+          infoPanel.removeEventListener('transitionend', handleTransitionEnd);
+        }
+      };
+
+      infoPanel.addEventListener('transitionend', handleTransitionEnd);
+      infoPanel.classList.add('visible');
+    }
+
+    // Hide info panel
+    function hideInfoPanel() {
+      infoPanel.classList.remove('show-content', 'visible');
+    }
+
+    // Update score + accuracy
+    function updateScore() {
+      const accuracy = totalGuesses > 0 
+        ? ((score / totalGuesses) * 100).toFixed(0) 
+        : 0;
+      scoreDisplay.textContent = `Score: ${score} (Accuracy: ${accuracy}%)`;
+    }
+
+    // Enable/disable buttons
+    function enableButtons(enable) {
+      aiBtn.disabled = !enable;
+      notAiBtn.disabled = !enable;
+    }
+
+    // Event Listeners
+    aiBtn.addEventListener('click', () => handleGuess('AI'));
+    notAiBtn.addEventListener('click', () => handleGuess('Not AI'));
+
+    // Start the game on load
+    window.onload = initGame;
+  </script>
+</body>
+</html>
